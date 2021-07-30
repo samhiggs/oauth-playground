@@ -1,13 +1,10 @@
 import yaml, os
 import flask
-from datetime import timedelta
-from flask import Flask, jsonify, abort, redirect, url_for, session
+from flask import Flask, jsonify, abort, session
 import requests_oauthlib
 from db import fetch_reviews, fetch_review, fetch_user_reviews, NotFoundError, NotAuthorizedError
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
-app.permanent_session_data = timedelta(minutes=60)
 
 config = yaml.safe_load(open('configuration.yml', 'r'))
 CLIENT_ID = config['simplelogin']['CLIENT_ID']
@@ -27,8 +24,6 @@ def index():
 
 @app.route('/login')
 def login():
-    if 'email' in session:
-        return redirect_url(url_for('/reviews'))
     simplelogin = requests_oauthlib.OAuth2Session(
         CLIENT_ID,
         redirect_uri='http://localhost:5000/callback'
@@ -46,24 +41,19 @@ def callback():
     )
 
     user_info = simplelogin.get(USERINFO_URL).json()
-    print(user_info['email'])
-    session['email'] = user_info['email']
     return f"""
     User information: <br>
     Name: {user_info["name"]} <br>
     Email: {user_info["email"]} <br>
     Avatar <img src="{user_info.get('avatar_url')}"> <br>
     <br>
-    <a href="/reviews">reviews</a> <br>
+    {fetch_user_reviews(user_info["email"])} <br><br>
     <a href="/">Home</a>
     """
 
 @app.route('/reviews')
 def all_reviews():
-    if 'email' not in session:
-        return redirect(url_for('/'))
-    else:
-        return fetch_user_reviews(session['email'])
+    return jsonify(fetch_reviews())
 
 @app.route('/review/<id>')
 def get_reveiew(id):

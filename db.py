@@ -47,10 +47,11 @@ def fetch_reviews(user: str = None):
     try:
         with SQLite('winereviews.db') as cur:
             # If user is none select 20 from a random start, otherwise only get users
+            print(user)
             if user is None:
-                qry = f'SELECT * FROM reviews where private=0 limit 20 offset {random.randint(0,10000)}'
+                qry = f"SELECT * FROM reviews where private=0 limit 20 offset {random.randint(0,10000)}"
             else:
-                qry = f'SELECT * FROM reviews where private=0 and user_published = {user} limit 20'
+                qry = f"SELECT * FROM reviews where private=0 and user_published = '{user}' limit 20"
             cur.execute(qry)
             result = list(map(review_lst_to_json, cur.fetchall()))
             return result
@@ -61,7 +62,6 @@ def fetch_reviews(user: str = None):
 
 def fetch_user_reviews(user: str):
     df = pd.DataFrame(fetch_reviews(user))
-    df = df[df['user_published'] == user]
     return df.to_html()
 
 def fetch_review(id: str):
