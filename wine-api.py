@@ -1,8 +1,10 @@
 import yaml, os
 import flask
 from datetime import timedelta
-from flask import Flask, jsonify, abort, redirect, url_for, session
+from flask import Flask, jsonify, abort, redirect, url_for, session, request
 import requests_oauthlib
+import joblib, json
+import pandas as pd
 from db import fetch_reviews, fetch_review, fetch_user_reviews, NotFoundError, NotAuthorizedError
 
 app = Flask(__name__)
@@ -74,5 +76,48 @@ def get_reveiew(id):
     except NotAuthorizedError:
         abort(403, description='Access Denied')
 
+def _predict(df, cols):
+    df_ = df[cols].apply(' '.join, axis=1)
+    return pipeline.predict(df_)
+
+class InvalidDataError(Exception):
+    code = 403
+    description = "Invalid Data"
+
+@app.errorhandler(InvalidDataError)
+def handle_exception(err):
+
+    res = {"error": err.description, "message": ""}
+    # Optionally ally user to add custom message
+    if len(err.args) > 0:
+        res["message"] = err.args[0]
+
+    app.logger.error(f'{err.description}: {res["message"]}')
+    return jsonify(res), err.code
+
+
+@app.route('/score', methods=['POST'])
+def score():
+    """ curl -X POST -H "Content-Type: application/json" -d '[{"a": 1.23}]' localhost:5000/score"""
+    cols = ['country', 'description', 'designation', 'province', 'region_1']
+    json_ = request.json
+    try:
+        query_df = pd.DataFrame(json_)
+    except Exception as e:
+        return jsonify({"error": "{e}", "message": "Unable to create dataframe from json"}), 403
+
+    if cols not in df.columns:
+        missing_cols = set(df.columns) - set(cols)
+        raise InvalidDataError(f"columns missing from data {missing_cols}")
+
+    predictions = _predict(query_df)
+
+    # predictions = [1,2,3]
+    print(predictions)
+    return jsonify({'prediction': list(predictions)})
+
+
 if __name__ == '__main__':
+    # login_manager = LoginManager
+    pipeline = joblib.load('model.joblib')
     app.run(debug=True)
