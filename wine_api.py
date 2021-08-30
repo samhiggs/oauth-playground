@@ -65,4 +65,4 @@ def get_reveiew(id):
         abort(403, description='Access Denied')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(ssl_context=('cert.pem', 'key.pem'), debug=True)

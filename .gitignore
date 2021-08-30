@@ -130,3 +130,5 @@ dmypy.json
 .pyre/
 data
 slack_test.py
+cert.pem
+key.pem
