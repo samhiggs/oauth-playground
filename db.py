@@ -21,6 +21,11 @@ class NotFoundError(Exception):
 class NotAuthorizedError(Exception):
     pass
 
+class InvalidDataError(Exception):
+    code = 403
+    description = "Invalid Data"
+
+
 # You can also use decorators for retrying for the case where it might just
 # be a random issue and retrying is solved.
 
